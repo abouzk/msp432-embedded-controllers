@@ -22,21 +22,19 @@ void I2C_init(){
 
 
 void I2C_readData(uint32_t moduleInstance,uint8_t PeriphAddress,uint8_t StartReg,uint8_t *data,uint8_t len){
-    // First write the start register to the peripheral device. This can be
-    // done by using the I2C_writeData function with a length of 0.
+    // First write the start register to the peripheral device. 
     I2C_writeData(moduleInstance,PeriphAddress,StartReg,0,0);
     if(len==0){
         return;
     }
 
-    // Then do read transaction...
+    // --- ATOMIC BLOCK START ---
+    Interrupt_disableMaster(); 
     I2C_setSlaveAddress(moduleInstance,PeriphAddress); // Set the peripheral address
     I2C_setMode(moduleInstance,EUSCI_B_I2C_RECEIVE_MODE); // Indicate a read operation
-    I2C_masterReceiveStart(moduleInstance); // Start the communication. This function
-                // doe two things: It first sends the START signal and
-                // then sends the peripheral address. Once started, the eUSCI
-                // will automatically fetch bytes from the peripheral until
-                // a STOP signal is requested to be sent.
+    I2C_masterReceiveStart(moduleInstance); // Start the communication safely
+    Interrupt_enableMaster();  
+    // --- ATOMIC BLOCK END ---
 
     // This code loops through 1 less than all bytes to receive
     uint8_t ctr;
@@ -44,22 +42,21 @@ void I2C_readData(uint32_t moduleInstance,uint8_t PeriphAddress,uint8_t StartReg
         while(!(UCB0IFG&UCRXIFG0)); // Wait for a data byte to become available
         data[ctr] = I2C_masterReceiveMultiByteNext(moduleInstance); // read and store received byte
     }
-    // Prior to receiving the final byte, request the STOP signal such that the
-    // communication will halt after the byte is received.
+    
     data[ctr] = I2C_masterReceiveMultiByteFinish(moduleInstance); // send STOP, read and store received byte
 
-
-    __delay_cycles(200); // A short delay to avoid starting another I2C transaction too quickly
+    __delay_cycles(200); 
 }
 
 
 void I2C_writeData(uint32_t moduleInstance,uint8_t PeriphAddress,uint8_t StartReg,uint8_t *data ,uint8_t len){
+    // --- ATOMIC BLOCK START ---
+    Interrupt_disableMaster(); 
     I2C_setSlaveAddress(moduleInstance,PeriphAddress); // Set the peripheral address
     I2C_setMode(moduleInstance,EUSCI_B_I2C_TRANSMIT_MODE); // Indicate a write operation
-
-    I2C_masterSendMultiByteStart(moduleInstance,StartReg); // Start the communication.
-                // This function does three things. It sends the START signal,
-                // sends the address, and then sends the start register.
+    I2C_masterSendMultiByteStart(moduleInstance,StartReg); // Start the communication safely
+    Interrupt_enableMaster();  
+    // --- ATOMIC BLOCK END ---
 
     // This code loops through all of the bytes to send.
     uint8_t ctr;
@@ -69,5 +66,5 @@ void I2C_writeData(uint32_t moduleInstance,uint8_t PeriphAddress,uint8_t StartRe
     // Once all bytes are sent, the I2C transaction is stopped by sending the STOP signal
     I2C_masterSendMultiByteStop(moduleInstance);
 
-    __delay_cycles(200); // A short delay to avoid starting another I2C transaction too quickly
+    __delay_cycles(200); 
 }
