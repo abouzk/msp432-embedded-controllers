@@ -1,4 +1,4 @@
-# MSP432 Embedded Control Portfolio
+# Real-Time Embedded Motor Controller (TI MSP432)
 **Hardware:** TI MSP432P401R (ARM Cortex-M4F) | **Sensors:** Ultrasonic Rangefinder, I2C Compass
 
 ![Hardware Integration: TI MSP432 Launchpad mounted on custom mobile chassis](media/launchpad_and_car.png)
@@ -9,9 +9,9 @@ This repository contains low-level drivers and control logic developed for an au
 
 ## Key Modules
 * **I2C Driver:** Register-level implementation of the EUSCI module (no external OS).
-* **Velocity Control:** A 10Hz closed-loop controller using Feedforward + Proportional logic to compensate for battery voltage drop and load variance. Achieved <5% steady-state error.
-* **Interrupt Management:** Usage of SysTick and Timer_A for encoder quadrature decoding.
+* **Velocity Control:** A 10Hz closed-loop controller using Feedforward + Proportional (P) logic utilizing the hardware FPU to compensate for battery voltage drop and load variance. Achieved <5% steady-state error.
+* **Interrupt Management:** Usage of hardware timers (`Timer_A`) in Continuous Capture Mode for sub-10µs encoder quadrature decoding.
 
 ## Engineering Challenges & Retrospective
-* **Challenge:** The I2C bus required atomic access during start conditions.
-* **Solution:** Implemented critical sections in `i2c_driver.c`. In a future iteration, I would replace the blocking `__delay_cycles` with a state machine or DMA transfer to free up CPU cycles for path planning.
+* **Challenge:** The I2C bus required atomic access during start conditions to prevent data corruption.
+* **Solution:** Implemented critical sections (`Interrupt_disableMaster()`) around the start and address assignment routines in `i2c_driver.c`. In a future iteration, I would replace the blocking `__delay_cycles` with a state machine or DMA transfer to free up CPU cycles for path planning.
